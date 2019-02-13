@@ -1,0 +1,8 @@
+auth:
+  username: 'username'
+  password: 'password'
+
+cloudera_manager:
+  host: 'http://cmhost'
+  port: '7180'
+  api_version: 'v30'

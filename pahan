@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+
+import os, logging, sys, yaml
+from pprint import pprint
+
+import cm_client
+from cm_client.rest import ApiException
+
+def create_cluster_api_instance(cm_host, cm_port, cm_version):
+  cm_url = cm_host + ':' + cm_port + '/api/' + cm_version
+  cm_api_client = cm_client.ApiClient(cm_url)
+  return cm_client.ClustersResourceApi(cm_api_client)
+
+def list_all_clusters(cm_api_client):  
+  return cm_api_client.read_clusters(view='SUMMARY')
+
+def read_config(file_path):
+  logging.info("Function: %s", sys._getframe().f_code.co_name)
+  config = yaml.safe_load(open(file_path))
+  return config
+
+def main():
+  try:
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s %(levelname)-8s %(message)s',
+                        datefmt='%a, %d %b %Y %H:%M:%S')
+    logging.info('Interpreter location: %s', sys.executable)
+    config = read_config("config.yml")
+    logging.info(config)
+    cloudera_manager_config = config['cloudera_manager']
+    create_cluster_api_instance(
+      cloudera_manager_config['host'], 
+      cloudera_manager_config['port'], 
+      cloudera_manager_config['api_version']
+    )
+    #for cluster in api_response.items:
+    #  print cluster.name, -, cluster.full_version
+  except KeyboardInterrupt:
+    logging.info("Ctrl+c was pressed, exiting...")
+    sys.exit()
+
+if __name__ == '__main__':
+  main()
