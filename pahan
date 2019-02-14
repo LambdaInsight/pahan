@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import os, logging, sys, yaml, argparse
-from pprint import pprint
+import pprint
 
 import cm_client
 from cm_client.rest import ApiException
@@ -20,12 +20,14 @@ def read_config(file_path):
   return config
 
 def check_params(args,parser,config):
+    logging.info("Args: " + pprint.pformat(args))
+    logging.info("Parser: " + pprint.pformat(parser))
     if not any(vars(args).values()):
       logging.error("No parameter were passed")
       parser.print_help()
       sys.exit(2)
     elif args.action:
-      logging.info("Action")
+      logging.info("Action: " + pprint.pformat(args.action))
     else:
       logging.error("Unknown param")
       sys.exit(2)
@@ -37,7 +39,7 @@ def main():
                         datefmt='%a, %d %b %Y %H:%M:%S')
     logging.info('Interpreter location: %s', sys.executable)
     config = read_config("config.yml")
-    logging.info(config)
+    logging.debug(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--action')
