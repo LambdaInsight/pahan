@@ -1,0 +1,4 @@
+- hosts: postgres-server
+  remote_user: centos
+  roles:
+    - role: postgres-server

@@ -2,16 +2,17 @@
 10.20.30.40
 
 [cm-node:vars]
-postgres_login_host=10.20.30.40
-postgres_login_port=5432
-postgres_login_user=sa
-#ansible vault is completely broken - does not work at all
-postgres_login_password=whatareyoudummy
-postgres_database_name=dev
+
+[postgres-server]
+10.20.30.40
+
+[postgres-server:vars]
+
 
 
 [all:children]
 cm-node
+postgres-server
 
 [all:vars]
 stage=dev

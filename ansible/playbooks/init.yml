@@ -4,4 +4,4 @@
     - role: os
     - role: oracle-java
     - role: python
-#    - role: postfix
+    - role: postfix
