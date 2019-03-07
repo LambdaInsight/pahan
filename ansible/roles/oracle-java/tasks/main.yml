@@ -1,0 +1,31 @@
+---
+- name: Checking Java home directory
+  stat: path={{ java_home }}
+  register: java_home_created
+
+- name: Creating Java home directory
+  file: path={{ java_home }} owner={{ java_user }} group={{ java_group }} mode={{ java_home_permission }} state=directory
+  when: java_home_created.stat.exists == false
+  become: yes
+
+- name: Check if Java is already downloaded
+  stat: path={{ java_home }}/{{ jre_file  }}
+  register: java_file_downloaded
+
+- name: Downloading Java RPM
+  get_url:
+    url: "{{ download_url }}/{{ jre_file }}"
+    dest: "{{ java_home }}/{{ jre_file }}"
+    mode: 0600
+  when: java_file_downloaded.stat.exists == false
+  become: yes
+
+- name: Check if Java is already installed
+  stat: path='/usr/bin/java'
+  register: java_installed
+
+- name: Install Java RPM
+  yum: name={{ java_home }}/{{ jre_file  }} state='present'
+  become: yes
+  when: java_installed.stat.exists == false
+

@@ -1,0 +1,8 @@
+---
+- name: Installing PIP
+  yum: name=python-pip state=present
+  become: yes
+
+- name: Installing Boto
+  pip: name=boto state=latest
+  become: yes

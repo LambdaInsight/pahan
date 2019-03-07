@@ -1,0 +1,7 @@
+- hosts: all
+  remote_user: centos
+  roles:
+    - role: os
+    - role: oracle-java
+    - role: python
+#    - role: postfix

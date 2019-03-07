@@ -1,0 +1,8 @@
+---
+download_url: 'https://s3.eu-central-1.amazonaws.com/li-global-prod-artifacts/software/java'
+jre_file: 'jre-8u202-linux-x64.rpm'
+jdk_file: ''
+java_home: '/opt/java/'
+java_user: 'centos'
+java_group: 'centos'
+java_home_permission: '0755'

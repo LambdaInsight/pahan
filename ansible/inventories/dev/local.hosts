@@ -1,0 +1,10 @@
+[cm-node]
+10.20.30.40
+
+[cm-node:vars]
+
+[all:children]
+cm-node
+
+[all:vars]
+stage=dev

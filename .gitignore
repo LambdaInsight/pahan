@@ -1,1 +1,4 @@
 venv/
+ansible.cfg
+.DS_Store
+.vagrant

@@ -1,0 +1,92 @@
+---
+- name: Check if Cloudera Manager Repo is installed
+  stat: path={{ item.path }}
+  with_items:
+    - {'name': cloudera-manager-repo, 'path': "{{ cloudera_manager_repo_path }}" }
+  register: cloudera_manager_repo_installed
+
+- name: Installing Cloudera Manager Repo
+  get_url:
+    url: "{{ cloudera_manager_5_repo_url }}"
+    dest: "{{ cloudera_manager_repo_path }}"
+    mode: 0444
+  when: item.stat.exists == false
+  with_items: "{{ cloudera_manager_repo_installed.results }}"
+  become: yes
+
+- name: Check if Cloudera Manager is installed
+  stat: path={{ item.path }}
+  with_items:
+    - {'name': cloudera-manager-daemons,  'path': /etc/cloudera-scm-server/db.properties}
+    - {'name': cloudera-manager-server,   'path': /etc/cloudera-scm-server/db.properties}
+  register: cloudera_manager_installed
+
+- name: Installing Cloudera Manager
+  yum: name={{ item.item.name }} state=present
+  when: item.stat.exists == false
+  with_items: "{{ cloudera_manager_installed.results }}"
+  become: yes
+
+- name: Changing Clouder Manager
+  lineinfile:
+    path: /etc/default/cloudera-scm-server
+    state: present
+    regexp: '^export\ CMF_JAVA_OPTS'
+    line: 'export CMF_JAVA_OPTS="-ea -server -Xmx4G -XX:MaxPermSize=384m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp"'
+  become: yes
+
+- name: Rendering db.properties
+  template:
+    src: db.properties.j2
+    dest: /etc/cloudera-scm-server/db.properties
+    owner: cloudera-scm
+    group: cloudera-scm
+    mode: 0600
+  become: yes
+
+- name: Installing Postgres client repo
+  yum:
+    name: "{{ postgres_10_repo_rpm }}"
+    state: present
+  become: yes
+
+- name: Installing Postgres client
+  yum: name=postgresql10 state=present
+  become: yes
+
+- name: Installing psycopg2 (pip)
+  pip: name=psycopg2 state=present
+  become: yes
+
+- name: Creating additional databases
+  postgresql_db:
+    login_host: "{{ postgres_login_host }}"
+    login_user: "{{ postgres_login_user }}"
+    login_password: "{{ postgres_login_password }}"
+    name: "{{ item.database_name }}"
+    encoding: UTF-8
+    lc_collate: en_US.UTF-8
+    lc_ctype: en_US.UTF-8
+  with_items: "{{ databases_to_be_created }}"
+
+- name: Creating additional database users
+  postgresql_user:
+    login_host: "{{ postgres_login_host }}"
+    login_user: "{{ postgres_login_user }}"
+    login_password: "{{ postgres_login_password }}"
+    conn_limit: 256
+    db: "{{ item.database_name }}"
+    name: "{{ item.database_user }}"
+    password: "{{ item.database_password }}"
+  with_items: "{{ databases_to_be_created }}"
+
+- name: Running SCM
+  shell: /usr/share/cmf/schema/scm_prepare_database.sh -h "{{ postgres_login_host }}" postgresql "{{ cloudera_manager_database_name }}" "{{ cloudera_manager_database_user }}" "{{ cloudera_manager_database_password }}"
+  become: yes
+
+- name: Enabling & starting Cloudera Manager
+  service:
+    name: cloudera-scm-server
+    state: started
+    enabled: yes
+  become: yes
