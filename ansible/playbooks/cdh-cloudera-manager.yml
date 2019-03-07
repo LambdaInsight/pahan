@@ -1,0 +1,4 @@
+- hosts: cm-node
+  remote_user: centos
+  roles:
+    - role: cdh-cloudera-manager

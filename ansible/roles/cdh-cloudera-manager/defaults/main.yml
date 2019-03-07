@@ -3,23 +3,23 @@ postgres_10_repo_rpm: 'https://download.postgresql.org/pub/repos/yum/10/redhat/r
 
 cloudera_manager_repo_path: '/etc/yum.repos.d/cloudera-manager.repo'
 
-postgres_login_host: 'mi-dev-proc-rds-instance.coewhkom8rnu.eu-central-1.rds.amazonaws.com'
+postgres_login_host: '10.20.30.40'
 postgres_login_port: 5432
 postgres_login_user: 'sa'
-postgres_login_password: 'quickfoxdiesfast'
-postgres_database_name: 'midev'
+postgres_login_password: 'whatareyoudummy'
+postgres_database_name: 'dev'
 
 databases_to_be_created:
   - { database_name: 'defaultscm',
-      database_user: 'scm',
+      database_user: 'defaultscm',
       database_password: 'defaultscm' }
   - {
       database_name: 'defaulthive',
-      database_user: 'hive',
+      database_user: 'defaulthive',
       database_password: 'defaulthive' }
   - {
       database_name: 'defaultamon',
-      database_user: 'amon',
+      database_user: 'defaultamon',
       database_password: 'defaultamon' }
 
 cloudera_manager_database_name: "{{ databases_to_be_created[0]['database_name'] }}"
