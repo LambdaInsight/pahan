@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo "This script assumes pip being installed"
-pip3 install virtualenv
+pip3 install --user --upgrade virtualenv
 virtualenv venv
 . venv/bin/activate
 if [[ -z "$VIRTUAL_ENV" ]]; then

@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 
 import os, logging, sys, yaml, argparse
+from enum import Enum
 import pprint
 
 import cm_client
 from cm_client.rest import ApiException
+
+class Action(Enum):
+  ADD_ROLE = 1
 
 def create_cluster_api_instance(cm_host, cm_port, cm_version):
   cm_url = cm_host + ':' + cm_port + '/api/' + cm_version
@@ -27,6 +31,8 @@ def check_params(args,parser,config):
       parser.print_help()
       sys.exit(2)
     elif args.action:
+      if not isinstance(args.action, Action):
+        logging.error('Invalid action')
       logging.info("Action: " + pprint.pformat(args.action))
     else:
       logging.error("Unknown param")
