@@ -1,42 +1,68 @@
 #!/usr/bin/env python
 
 import os, logging, sys, yaml, argparse
-from enum import Enum
 import pprint
 
 import cm_client
 from cm_client.rest import ApiException
 
-class Action(Enum):
-  ADD_ROLE = 1
-
-def create_cluster_api_instance(cm_host, cm_port, cm_version):
+def create_cluster_api_instance(cm_host, cm_port, cm_version, cm_user, cm_pass):
   cm_url = cm_host + ':' + cm_port + '/api/' + cm_version
   cm_api_client = cm_client.ApiClient(cm_url)
+  cm_client.configuration.username = cm_user
+  cm_client.configuration.password = cm_pass
   return cm_client.ClustersResourceApi(cm_api_client)
 
 def list_all_clusters(cm_api_client):  
-  return cm_api_client.read_clusters(view='SUMMARY')
+  try:
+    res = cm_api_client.read_clusters(view='SUMMARY')
+  except Exception as e:
+    res = 'error'
+  return res
 
 def read_config(file_path):
   logging.info("Function: %s", sys._getframe().f_code.co_name)
   config = yaml.safe_load(open(file_path))
   return config
 
-def check_params(args,parser,config):
-    logging.info("Args: " + pprint.pformat(args))
-    logging.info("Parser: " + pprint.pformat(parser))
-    if not any(vars(args).values()):
-      logging.error("No parameter were passed")
-      parser.print_help()
-      sys.exit(2)
-    elif args.action:
-      if not isinstance(args.action, Action):
-        logging.error('Invalid action')
-      logging.info("Action: " + pprint.pformat(args.action))
+def no_op():
+  logging.info(pprint.pformat('NO OP'))
+  return 'ok'
+
+def run_action(action,cluster_api_instance):
+  logging.info("Args: " + pprint.pformat(action))
+  
+  if action == 'list_all_clusters':
+    ret = list_all_clusters(cluster_api_instance)
+    if not ret == 'error':
+      clusters = [ (item.name, item.full_version) for item in ret.items ]
+      logging.info('Clusters: ' + pprint.pformat(clusters))
     else:
-      logging.error("Unknown param")
-      sys.exit(2)
+      logging.error('Error in listing clusters')
+  elif action == 'list_all_clusters':
+    list_all_clusters(cluster_api_instance)
+  else:
+    no_op()
+  return 'ok'
+
+def check_params(args,parser,config):
+  logging.info("Args: " + pprint.pformat(args))
+  logging.info("Parser: " + pprint.pformat(parser))
+  allowed_action = ['add_role', 'list_all_clusters', 'no_op']
+  if not any(vars(args).values()):
+    logging.error("No parameter were passed")
+    parser.print_help()
+    return False
+  elif args.action:
+    if not args.action in allowed_action:
+      logging.error('Invalid action')
+      return False
+    else:
+      logging.info("Action: " + pprint.pformat(args.action))
+      return True
+  else:
+    logging.error("Unknown param")
+    return False
 
 def main():
   try:
@@ -50,14 +76,19 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--action')
     args = parser.parse_args()
-    check_params(args,parser,config)
-
-    cloudera_manager_config = config['cloudera_manager']
-    create_cluster_api_instance(
-      cloudera_manager_config['host'], 
-      cloudera_manager_config['port'], 
-      cloudera_manager_config['api_version']
-    )
+    if check_params(args,parser,config):
+      cloudera_manager_config = config['cloudera_manager']
+      cluster_api_instance = create_cluster_api_instance(
+        cloudera_manager_config['host'], 
+        cloudera_manager_config['port'], 
+        cloudera_manager_config['api_version'],
+        cloudera_manager_config['username'],
+        cloudera_manager_config['password']
+      )
+      run_action(args.action, cluster_api_instance)
+    else:
+      logging.error("Error")
+      sys.exit(2)
     #for cluster in api_response.items:
     #  print cluster.name, -, cluster.full_version
   except KeyboardInterrupt:
