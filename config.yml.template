@@ -1,0 +1,6 @@
+cloudera_manager:
+  host: 'http://cm.domain.tld'
+  port: '7180'
+  api_version: 'v19'
+  username: 'admin'
+  password: 'admin'
