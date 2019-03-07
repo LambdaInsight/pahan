@@ -1,0 +1,7 @@
+---
+postgres_repo_url: 'https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-7-x86_64/pgdg-centos11-11-2.noarch.rpm'
+postgres_server: 'postgresql11-server'
+postgres_config_file: '/var/lib/pgsql/11/data/postgresql.conf'
+postgres_hba_file: '/var/lib/pgsql/11/data/pg_hba.conf'
+postgres_service: 'postgresql-11.service'
+
