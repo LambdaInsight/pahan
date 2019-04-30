@@ -3,8 +3,16 @@
 
 [cm-node:vars]
 
+[postgres-server]
+10.20.30.40
+
+[postgres-server:vars]
+
+
+
 [all:children]
 cm-node
+postgres-server
 
 [all:vars]
 stage=dev
