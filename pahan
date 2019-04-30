@@ -1,22 +1,51 @@
 #!/usr/bin/env python
 
 import os, logging, sys, yaml, argparse
+from datetime import datetime, timedelta
 import pprint
 
 import cm_client
 from cm_client.rest import ApiException
 
-def create_cluster_api_instance(cm_host, cm_port, cm_version, cm_user, cm_pass):
+def create_cm_api_client(cm_host, cm_port, cm_version, cm_user, cm_pass):
   cm_url = cm_host + ':' + cm_port + '/api/' + cm_version
   cm_api_client = cm_client.ApiClient(cm_url)
   cm_client.configuration.username = cm_user
   cm_client.configuration.password = cm_pass
-  return cm_client.ClustersResourceApi(cm_api_client)
+  return cm_api_client
+
+def list_all_impala_queries(impala_queries_resource_api, cluster_name, service_name):  
+  cluster_name=cluster_name
+  service_name=service_name
+  try:
+    api_response=impala_queries_resource_api.get_impala_queries(
+      cluster_name, 
+      service_name, 
+      filter='', 
+      _from='2018-04-30T21:40:00+0000', 
+      limit=1000, 
+      offset=0, 
+      to='now'
+    )
+    statements = [ item.statement for item in api_response.queries ]
+    res = (statements, api_response.warnings)
+  except Exception as e:
+    logging.fatal(e, exc_info=True)
+    res = 'error'
+  return res
 
 def list_all_clusters(cm_api_client):  
   try:
     res = cm_api_client.read_clusters(view='SUMMARY')
   except Exception as e:
+    res = 'error'
+  return res
+
+def list_all_services(cm_api_client, cluster_name):  
+  try:
+    res = cm_api_client.read_services(cluster_name, view='SUMMARY')
+  except Exception as e:
+    logging.fatal(e, exc_info=True)
     res = 'error'
   return res
 
@@ -29,26 +58,40 @@ def no_op():
   logging.info(pprint.pformat('NO OP'))
   return 'ok'
 
-def run_action(action,cluster_api_instance):
-  logging.info("Args: " + pprint.pformat(action))
-  
-  if action == 'list_all_clusters':
-    ret = list_all_clusters(cluster_api_instance)
+def run_action(args, cm_api_client):
+  logging.info("Args: " + pprint.pformat(args.action))
+  if args.action == 'list_all_clusters':
+    cluster_resource_api = cm_client.ClustersResourceApi(cm_api_client)
+    ret = list_all_clusters(cluster_resource_api)
     if not ret == 'error':
       clusters = [ (item.name, item.full_version) for item in ret.items ]
       logging.info('Clusters: ' + pprint.pformat(clusters))
     else:
       logging.error('Error in listing clusters')
-  elif action == 'list_all_clusters':
-    list_all_clusters(cluster_api_instance)
+  if args.action == 'list_all_services':
+    service_resource_api = cm_client.ServicesResourceApi(cm_api_client)
+    ret = list_all_services(service_resource_api, args.cluster)
+    if not ret == 'error':
+      logging.info('Services: ' + pprint.pformat(ret))
+    else:
+      logging.error('Error in listing services')
+  elif args.action == 'list_all_impala_queries':
+    service_name='impala'
+    impala_queries_resource_api = cm_client.ImpalaQueriesResourceApi(cm_api_client)
+    ret = list_all_impala_queries(impala_queries_resource_api, args.cluster, service_name)
+    if not ret == 'error':
+      logging.info(ret)
+    else:
+      logging.error('Error in listing queries')
   else:
+    logging.info("Action is not implemented")
     no_op()
   return 'ok'
 
 def check_params(args,parser,config):
   logging.info("Args: " + pprint.pformat(args))
   logging.info("Parser: " + pprint.pformat(parser))
-  allowed_action = ['add_role', 'list_all_clusters', 'no_op']
+  allowed_action = ['add_role', 'list_all_clusters', 'list_all_services', 'list_all_impala_queries', 'no_op']
   if not any(vars(args).values()):
     logging.error("No parameter were passed")
     parser.print_help()
@@ -75,22 +118,21 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--action')
+    parser.add_argument('-c', '--cluster')
     args = parser.parse_args()
     if check_params(args,parser,config):
       cloudera_manager_config = config['cloudera_manager']
-      cluster_api_instance = create_cluster_api_instance(
+      cm_api_client = create_cm_api_client(
         cloudera_manager_config['host'], 
         cloudera_manager_config['port'], 
         cloudera_manager_config['api_version'],
         cloudera_manager_config['username'],
         cloudera_manager_config['password']
       )
-      run_action(args.action, cluster_api_instance)
+      run_action(args, cm_api_client)
     else:
       logging.error("Error")
       sys.exit(2)
-    #for cluster in api_response.items:
-    #  print cluster.name, -, cluster.full_version
   except KeyboardInterrupt:
     logging.info("Ctrl+c was pressed, exiting...")
     sys.exit()
