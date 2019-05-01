@@ -2,17 +2,19 @@
 
 import os, logging, sys, yaml, argparse
 import hashlib
-from datetime import datetime, timedelta
 import dateutil.parser
 import pprint, re
+from datetime import datetime, timedelta
 
 import cm_client
 from cm_client.rest import ApiException
 
-def datetime_range(start=None, end=None, step=1):
-  span = end - start
-  for i in range(0, (span.days + 1), step):
-    yield (start + timedelta(days=i)).isoformat()
+def datetime_range(start, end):
+  hours = [start.isoformat()]
+  while start < end:
+    start = start + timedelta(hours=1)
+    hours.append(start.isoformat())
+  return hours
 
 def chunks(list_, group_size, overlap_size):
   return [list_[i:i+group_size] for i in range(0, len(list_), group_size-overlap_size)]
@@ -43,16 +45,17 @@ def list_all_impala_queries(impala_queries_resource_api, cluster_name, service_n
     pattern = re.compile(r'[0-9]{4}-[0-9]{2}-[0-9]{2}.*Z')
     hash_input = cluster_name+service_name+from_time+until_time 
     file_name = hashlib.sha256(hash_input.encode()).hexdigest()
-    with open(file_name+'.queries.sql', 'w') as textfile:
-      #textfile.writelines(statements[1].rstrip())
-      textfile.writelines([ item + ';\n\n\n' for item in statements ])
-    if api_response.warnings:
-      res = (len(statements), re.findall(pattern,api_response.warnings[0])[0])
+    if len(statements) > 0:
+      with open('queries/'+file_name+'.queries.sql', 'w') as textfile:
+        textfile.writelines([ item + ';\n\n' for item in statements ])
+      if api_response.warnings:
+        res = (len(statements), re.findall(pattern,api_response.warnings[0])[0])
+      else:
+        res = (len(statements), 'no warning')        
     else:
-      res = (len(statements), 'no warning')
-     
+      res = (0, 'no warning')
   except Exception as e:
-    logging.fatal(e, exc_info=True)
+    logging.error(str(e))
     res = 'error'
   return res
 
@@ -104,23 +107,30 @@ def run_action(args, cm_api_client):
       from_time='2019-01-01T04:23:30.775Z'
     else:
       from_time=args.from_time
-    logging.info("From time: " + pprint.pformat(from_time))
 
     if not args.until_time:
       until_time=datetime.utcnow().isoformat()
     else:
       until_time=args.until_time
-    logging.info("Until time: " + pprint.pformat(until_time))
 
     start=dateutil.parser.parse(from_time)
     end=dateutil.parser.parse(until_time)
-    date_partitions = chunks(list(datetime_range(start=start, end=end, step=2)),2,1)
+
+    logging.info("Start: " + pprint.pformat(from_time) + " :: End: " + pprint.pformat(until_time))
+
+    date_partitions = chunks(datetime_range(start, end),2,1)
     impala_queries_resource_api = cm_client.ImpalaQueriesResourceApi(cm_api_client)
     for chunk in date_partitions:
-      logging.info(pprint.pformat(chunk))
+      logging.info("Chunk " + pprint.pformat(chunk))
       if len(chunk) == 1:
         chunk.append(datetime.utcnow().isoformat())
-      ret = list_all_impala_queries(impala_queries_resource_api, args.cluster, service_name, chunk[0], chunk[1])
+      ret = list_all_impala_queries(
+        impala_queries_resource_api, 
+        args.cluster, 
+        service_name, 
+        chunk[0], 
+        chunk[1]
+      )
       if not ret == 'error':
         logging.info(ret)
       else:

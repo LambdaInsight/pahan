@@ -4,3 +4,4 @@ ansible.cfg
 .vagrant
 config.yml
 *.retry
+queries/
